@@ -72,6 +72,9 @@ REST endpoints:
 - `GET /api/bikes/stations` - latest status per station, joined with names
 - `GET /api/bikes/stations/{id}/history` - time series for one station
 - `GET /api/rail/vehicles/latest` - most recent rail vehicle positions
+- `GET /api/analytics/rail/headways?station=E03` - headway stats per station
+- `GET /api/analytics/rail/bunching` - bunches (<=3 min) and gaps (>=18 min) in the latest snapshot
+- `GET /api/analytics/rail/lines` - trains reporting per line
 - `GET /api/analytics/bikes/summary` - system totals plus empty/full stations
 - `GET /api/analytics/bikes/movers?minutes=60` - largest net bike changes in a window
 - `GET /api/analytics/bikes/stations/{id}/stats` - availability stats for one station
@@ -112,14 +115,27 @@ export TRANSIT_DATABASE_URL=postgresql+psycopg://transit:transit@localhost:5432/
 | `TRANSIT_RAIL_POLL_SECONDS` | `20` | rail poll interval |
 | `TRANSIT_INGEST` | `on` | `off` serves the API without pollers |
 
+## MCP server
+
+`src/transit_platform/mcp_server.py` exposes the same store to any MCP host
+(Claude Desktop, etc.) over stdio, the same pattern as my
+[garden-diagnostic-agent](https://github.com/anthony-marr/garden-diagnostic-agent):
+
+```bash
+python -m transit_platform.mcp_server
+```
+
+Tools: `get_train_arrivals`, `get_station_headways`, `get_rail_bunching`,
+`get_rail_lines`, `get_bikeshare_summary`, `get_bikeshare_movers`,
+`find_bike_stations`, `get_bike_station_stats`. Answers are as fresh as the
+last poll (rail ~20s, bikeshare ~30s when ingest runs), so "should I leave
+now?" is a lookup, not a guess.
+
 ## Roadmap
 
-- Headway and bunching analytics over the stored history (availability
-  stats and movers ship in `analytics.py`; an arrival-prediction model comes later)
-- Rail analytics once the WMATA key is configured
-- MCP server over the same tools - "should I leave now?" as a natural
-  language query, the same pattern as my
-  [garden-diagnostic-agent](https://github.com/anthony-marr/garden-diagnostic-agent)
+- Rail analytics ship in `rail_analytics.py`: per-direction headways,
+  bunching (two trains within 3 minutes) and service gaps (18+ minutes)
+  from stored predictions. An arrival-prediction model comes later.
 - Deploy to a small always-on host so the Pi never waits on my laptop
 
 ## Data sources

@@ -242,3 +242,11 @@ class TransitDB:
             & (rail_predictions.c.fetched_at == latest.c.mf))
         with self.engine.connect() as conn:
             return [dict(row._mapping) for row in conn.execute(q)]
+
+    def search_stations(self, name_query: str, limit: int = 10) -> list[dict]:
+        """Bikeshare stations whose name contains the query (case-insensitive)."""
+        q = (select(stations)
+             .where(stations.c.name.ilike(f"%{name_query}%"))
+             .order_by(stations.c.name).limit(limit))
+        with self.engine.connect() as conn:
+            return [dict(row._mapping) for row in conn.execute(q)]
