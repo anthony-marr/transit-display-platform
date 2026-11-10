@@ -1,0 +1,57 @@
+{
+ "data": {
+  "stations": [
+   {
+    "station_id": "0825e3b0-1f3f-11e7-bf6b-3863bb334450",
+    "num_bikes_available": 3,
+    "num_bikes_disabled": 0,
+    "num_docks_available": 17,
+    "num_docks_disabled": 0,
+    "is_installed": 1,
+    "is_renting": 1,
+    "is_returning": 1,
+    "last_reported": 1794272836,
+    "legacy_id": "322",
+    "num_ebikes_available": 0,
+    "num_scooters_available": 0,
+    "num_scooters_unavailable": 0,
+    "eightd_has_available_keys": false
+   },
+   {
+    "station_id": "08261f4b-1f3f-11e7-bf6b-3863bb334450",
+    "num_bikes_available": 6,
+    "num_bikes_disabled": 3,
+    "num_docks_available": 10,
+    "num_docks_disabled": 0,
+    "is_installed": 1,
+    "is_renting": 1,
+    "is_returning": 1,
+    "last_reported": 1794272840,
+    "legacy_id": "404",
+    "num_ebikes_available": 0,
+    "num_scooters_available": 0,
+    "num_scooters_unavailable": 0,
+    "eightd_has_available_keys": false
+   },
+   {
+    "station_id": "082520aa-1f3f-11e7-bf6b-3863bb334450",
+    "num_bikes_available": 1,
+    "num_bikes_disabled": 0,
+    "num_docks_available": 18,
+    "num_docks_disabled": 0,
+    "is_installed": 1,
+    "is_renting": 1,
+    "is_returning": 1,
+    "last_reported": 1794272846,
+    "legacy_id": "165",
+    "num_ebikes_available": 0,
+    "num_scooters_available": 0,
+    "num_scooters_unavailable": 0,
+    "eightd_has_available_keys": false
+   }
+  ]
+ },
+ "last_updated": 1794272979,
+ "ttl": 60,
+ "version": "1.1"
+}

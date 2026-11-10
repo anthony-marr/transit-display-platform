@@ -1,0 +1,78 @@
+{
+ "data": {
+  "stations": [
+   {
+    "station_id": "2248638685467727270",
+    "name": "W&OD Trail & Ayr Hill Ave N",
+    "short_name": "32357",
+    "lon": -77.26699754614974,
+    "lat": 38.904570158378796,
+    "region_id": "104",
+    "capacity": 13,
+    "rental_uris": {
+     "android": "https://dc.lft.to/lastmile_qr_scan",
+     "ios": "https://dc.lft.to/lastmile_qr_scan"
+    },
+    "rental_methods": [
+     "KEY",
+     "CREDITCARD"
+    ],
+    "has_kiosk": true,
+    "station_type": "classic",
+    "external_id": "2248638685467727270",
+    "electric_bike_surcharge_waiver": false,
+    "eightd_station_services": [],
+    "eightd_has_key_dispenser": false
+   },
+   {
+    "station_id": "08258475-1f3f-11e7-bf6b-3863bb334450",
+    "name": "Frederick Ave & Horners Ln",
+    "short_name": "32009",
+    "lon": -77.145213,
+    "lat": 39.094772,
+    "region_id": "43",
+    "capacity": 9,
+    "rental_uris": {
+     "android": "https://dc.lft.to/lastmile_qr_scan",
+     "ios": "https://dc.lft.to/lastmile_qr_scan"
+    },
+    "rental_methods": [
+     "KEY",
+     "CREDITCARD"
+    ],
+    "has_kiosk": true,
+    "station_type": "classic",
+    "external_id": "08258475-1f3f-11e7-bf6b-3863bb334450",
+    "electric_bike_surcharge_waiver": false,
+    "eightd_station_services": [],
+    "eightd_has_key_dispenser": false
+   },
+   {
+    "station_id": "08265124-1f3f-11e7-bf6b-3863bb334450",
+    "name": "Wheaton Metro / Georgia Ave & Reedie Dr",
+    "short_name": "32062",
+    "lon": -77.05102041363716,
+    "lat": 39.038423828518326,
+    "region_id": "44",
+    "capacity": 19,
+    "rental_uris": {
+     "android": "https://dc.lft.to/lastmile_qr_scan",
+     "ios": "https://dc.lft.to/lastmile_qr_scan"
+    },
+    "rental_methods": [
+     "KEY",
+     "CREDITCARD"
+    ],
+    "has_kiosk": true,
+    "station_type": "classic",
+    "external_id": "08265124-1f3f-11e7-bf6b-3863bb334450",
+    "electric_bike_surcharge_waiver": false,
+    "eightd_station_services": [],
+    "eightd_has_key_dispenser": false
+   }
+  ]
+ },
+ "last_updated": 1794273039,
+ "ttl": 60,
+ "version": "1.1"
+}
