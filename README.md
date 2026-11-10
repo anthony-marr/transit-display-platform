@@ -115,6 +115,18 @@ export TRANSIT_DATABASE_URL=postgresql+psycopg://transit:transit@localhost:5432/
 | `TRANSIT_RAIL_POLL_SECONDS` | `20` | rail poll interval |
 | `TRANSIT_INGEST` | `on` | `off` serves the API without pollers |
 
+## Deploy (Fly.io)
+
+Live at [transit-display-platform.fly.dev](https://transit-display-platform.fly.dev)
+since November 2026. `Dockerfile` + `fly.toml` run one always-on 256MB
+machine in `iad` with a 1GB volume at `/data` for the SQLite store; the
+WMATA key is a Fly secret, never in the repo. Roughly $2.30/mo before Fly's
+under-$5 invoice waiver.
+
+```bash
+fly deploy
+```
+
 ## MCP server
 
 `src/transit_platform/mcp_server.py` exposes the same store to any MCP host
@@ -135,8 +147,9 @@ now?" is a lookup, not a guess.
 
 - Rail analytics ship in `rail_analytics.py`: per-direction headways,
   bunching (two trains within 3 minutes) and service gaps (18+ minutes)
-  from stored predictions. An arrival-prediction model comes later.
-- Deploy to a small always-on host so the Pi never waits on my laptop
+  from stored predictions.
+- An arrival-prediction model trained on the stored headways, so the bunch
+  detector turns into a forecast
 
 ## Data sources
 
