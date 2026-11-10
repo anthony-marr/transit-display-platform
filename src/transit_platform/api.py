@@ -5,10 +5,12 @@ from __future__ import annotations
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse
 
-from . import config
+from . import analytics, config
 from .db import TransitDB
 from .hub import EventHub
 from .ingest import Poller
@@ -64,6 +66,24 @@ def create_app(db: TransitDB | None = None, hub: EventHub | None = None,
     @app.get("/api/rail/vehicles/latest")
     def rail_latest():
         return {"vehicles": app.state.db.latest_vehicle_positions()}
+
+    @app.get("/api/analytics/bikes/summary")
+    def bike_summary():
+        return analytics.summary_report(app.state.db)
+
+    @app.get("/api/analytics/bikes/movers")
+    def bike_movers(minutes: int = Query(default=60, ge=1, le=10080),
+                    limit: int = Query(default=10, ge=1, le=100)):
+        return analytics.movers_report(app.state.db, minutes=minutes, limit=limit)
+
+    @app.get("/api/analytics/bikes/stations/{station_id}/stats")
+    def bike_station_stats(station_id: str,
+                           minutes: int = Query(default=1440, ge=1, le=10080)):
+        return analytics.station_stats_report(app.state.db, station_id, minutes=minutes)
+
+    @app.get("/", include_in_schema=False)
+    def dashboard():
+        return FileResponse(Path(__file__).parent / "static" / "index.html")
 
     @app.websocket("/ws/feed")
     async def feed(ws: WebSocket, stations: str = Query(default="")):

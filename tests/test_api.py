@@ -62,3 +62,34 @@ def test_websocket_hello_and_broadcast(tmp_path):
             assert event["type"] == "bikeshare_status"
             # the station filter kept only s1
             assert [s["station_id"] for s in event["data"]["stations"]] == ["s1"]
+
+
+def test_analytics_endpoints(tmp_path):
+    import datetime as dt
+    client, db = _client(tmp_path)
+    now = dt.datetime.now(dt.timezone.utc)
+    t0 = (now - dt.timedelta(minutes=30)).isoformat()
+    t1 = now.isoformat()
+    db.upsert_stations([StationInfo(station_id="s1", name="Test", lat=38.9,
+                                    lon=-77.0, capacity=20)], t0)
+    db.insert_station_status([
+        StationStatus(station_id="s1", fetched_at=t0,
+                      num_bikes_available=10, num_docks_available=10),
+        StationStatus(station_id="s1", fetched_at=t1,
+                      num_bikes_available=4, num_docks_available=16),
+    ])
+    with client:
+        body = client.get("/api/analytics/bikes/summary").json()
+        assert body["total_bikes_available"] == 4
+        body = client.get("/api/analytics/bikes/movers?minutes=60").json()
+        assert body["movers"][0]["net_bike_change"] == -6
+        body = client.get("/api/analytics/bikes/stations/s1/stats").json()
+        assert body["samples"] == 2
+
+
+def test_dashboard_served(tmp_path):
+    client, _ = _client(tmp_path)
+    with client:
+        resp = client.get("/")
+        assert resp.status_code == 200
+        assert "Transit Display Platform" in resp.text

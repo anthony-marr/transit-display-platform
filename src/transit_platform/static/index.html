@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transit Display Platform</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+         background: #101418; color: #d8dee4; }
+  header { padding: 14px 20px; border-bottom: 1px solid #2a3138;
+           display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+         margin-right: 5px; background: #3fb950; }
+  .dot.off { background: #6e7681; }
+  main { padding: 20px; max-width: 1100px; margin: 0 auto; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+           gap: 12px; margin-bottom: 24px; }
+  .card { background: #171c21; border: 1px solid #2a3138; border-radius: 8px;
+          padding: 12px 14px; }
+  .card .num { font-size: 26px; font-weight: 700; }
+  .card .lbl { font-size: 11px; color: #8b949e; text-transform: uppercase;
+               letter-spacing: .06em; margin-top: 4px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em;
+       color: #8b949e; margin: 22px 0 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid #21282f; }
+  th { color: #8b949e; font-weight: 600; }
+  td.up { color: #3fb950; } td.down { color: #f85149; }
+  .pill { display: inline-block; background: #171c21; border: 1px solid #2a3138;
+          border-radius: 20px; padding: 3px 10px; margin: 2px; font-size: 12px; }
+  .meta { color: #6e7681; font-size: 12px; }
+  section { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Transit Display Platform</h1>
+  <span id="feeds" class="meta">connecting...</span>
+  <span id="clock" class="meta"></span>
+</header>
+<main>
+  <div class="cards" id="cards"></div>
+
+  <section>
+    <h2>Biggest movers (last hour)</h2>
+    <table>
+      <thead><tr><th>Station</th><th>Net bikes</th><th>Start</th><th>Now</th></tr></thead>
+      <tbody id="movers"></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Empty stations</h2>
+    <div id="empty"></div>
+  </section>
+  <section>
+    <h2>Full stations</h2>
+    <div id="full"></div>
+  </section>
+</main>
+<script>
+async function getJSON(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(url + " -> " + r.status);
+  return r.json();
+}
+
+function pill(s) { return `<span class="pill">${s.name || s.station_id}</span>`; }
+
+async function refresh() {
+  try {
+    const [status, summary, movers] = await Promise.all([
+      getJSON("/api/status"),
+      getJSON("/api/analytics/bikes/summary"),
+      getJSON("/api/analytics/bikes/movers?minutes=60&limit=10"),
+    ]);
+
+    const feeds = Object.entries(status.sources || {}).map(([name, s]) => {
+      const age = s.last_fetch ? Math.max(0, (Date.now() - new Date(s.last_fetch)) / 1000) : null;
+      const live = age !== null && age < 120;
+      return `<span><span class="dot ${live ? "" : "off"}"></span>${name}</span>`;
+    }).join(" &nbsp; ") || "no feeds yet";
+    document.getElementById("feeds").innerHTML = feeds;
+    document.getElementById("clock").textContent = "updated " + new Date().toLocaleTimeString();
+
+    document.getElementById("cards").innerHTML = [
+      [summary.total_bikes_available, "bikes available"],
+      [summary.total_ebikes_available, "e-bikes"],
+      [summary.total_docks_available, "open docks"],
+      [summary.stations_reporting, "stations reporting"],
+      [summary.stations_empty.length, "empty stations"],
+      [summary.stations_full.length, "full stations"],
+    ].map(([n, l]) => `<div class="card"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join("");
+
+    document.getElementById("movers").innerHTML = movers.movers.map(m => {
+      const cls = m.net_bike_change >= 0 ? "up" : "down";
+      const sign = m.net_bike_change >= 0 ? "+" : "";
+      return `<tr><td>${m.name || m.station_id}</td>` +
+             `<td class="${cls}">${sign}${m.net_bike_change}</td>` +
+             `<td>${m.bikes_start}</td><td>${m.bikes_end}</td></tr>`;
+    }).join("") || `<tr><td colspan="4" class="meta">need two polls inside the window</td></tr>`;
+
+    document.getElementById("empty").innerHTML =
+      summary.stations_empty.map(pill).join("") || `<span class="meta">none</span>`;
+    document.getElementById("full").innerHTML =
+      summary.stations_full.map(pill).join("") || `<span class="meta">none</span>`;
+  } catch (e) {
+    document.getElementById("feeds").textContent = "API unreachable: " + e.message;
+  }
+}
+refresh();
+setInterval(refresh, 15000);
+</script>
+</body>
+</html>

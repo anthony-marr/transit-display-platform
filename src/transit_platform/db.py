@@ -208,3 +208,14 @@ class TransitDB:
                     select(func.count()).select_from(rail_predictions)).scalar(),
             }
         return {"sources": out, "rows": counts}
+
+    def station_status_in_window(self, since_iso: str,
+                                 station_id: str | None = None) -> list[dict]:
+        """Status rows fetched at or after ``since_iso``, oldest first."""
+        q = (select(station_status)
+             .where(station_status.c.fetched_at >= since_iso)
+             .order_by(station_status.c.fetched_at.asc()))
+        if station_id:
+            q = q.where(station_status.c.station_id == station_id)
+        with self.engine.connect() as conn:
+            return [dict(row._mapping) for row in conn.execute(q)]

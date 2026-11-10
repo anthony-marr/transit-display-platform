@@ -72,6 +72,10 @@ REST endpoints:
 - `GET /api/bikes/stations` - latest status per station, joined with names
 - `GET /api/bikes/stations/{id}/history` - time series for one station
 - `GET /api/rail/vehicles/latest` - most recent rail vehicle positions
+- `GET /api/analytics/bikes/summary` - system totals plus empty/full stations
+- `GET /api/analytics/bikes/movers?minutes=60` - largest net bike changes in a window
+- `GET /api/analytics/bikes/stations/{id}/stats` - availability stats for one station
+- `GET /` - web dashboard over the analytics endpoints
 - `WS  /ws/feed` - live events (`?stations=id1,id2` to filter bikeshare)
 
 ## WMATA rail feeds
@@ -110,9 +114,9 @@ export TRANSIT_DATABASE_URL=postgresql+psycopg://transit:transit@localhost:5432/
 
 ## Roadmap
 
-- Headway and bunching analytics over the stored history (simple stats
-  first, an arrival-prediction model later)
-- Web dashboard reading the same WebSocket feed
+- Headway and bunching analytics over the stored history (availability
+  stats and movers ship in `analytics.py`; an arrival-prediction model comes later)
+- Rail analytics once the WMATA key is configured
 - MCP server over the same tools - "should I leave now?" as a natural
   language query, the same pattern as my
   [garden-diagnostic-agent](https://github.com/anthony-marr/garden-diagnostic-agent)
