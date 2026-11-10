@@ -93,3 +93,26 @@ def test_dashboard_served(tmp_path):
         resp = client.get("/")
         assert resp.status_code == 200
         assert "Transit Display Platform" in resp.text
+
+
+def test_rail_analytics_endpoints(tmp_path):
+    import datetime as dt
+    from transit_platform.schemas import RailPrediction
+    client, db = _client(tmp_path)
+    ts = dt.datetime.now(dt.timezone.utc).isoformat()
+    db.insert_predictions([
+        RailPrediction(station_code="E03", station_name="U Street", line="GR",
+                       destination="Greenbelt", minutes="2", group="1",
+                       fetched_at=ts),
+        RailPrediction(station_code="E03", station_name="U Street", line="GR",
+                       destination="Greenbelt", minutes="4", group="1",
+                       fetched_at=ts),
+    ])
+    with client:
+        body = client.get("/api/analytics/rail/headways?station=E03").json()
+        assert body["snapshots"] == 1
+        assert body["min_headway"] == 2
+        body = client.get("/api/analytics/rail/bunching").json()
+        assert body["bunches"][0]["headway"] == 2
+        body = client.get("/api/analytics/rail/lines").json()
+        assert body["lines"] == []

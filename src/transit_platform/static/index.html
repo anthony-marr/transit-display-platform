@@ -53,6 +53,18 @@
   </section>
 
   <section>
+    <h2>Rail - trains per line</h2>
+    <div id="lines"></div>
+  </section>
+  <section>
+    <h2>Rail - bunches and gaps (latest snapshot)</h2>
+    <table>
+      <thead><tr><th>Station</th><th>Line</th><th>Kind</th><th>Minutes</th><th>Detail</th></tr></thead>
+      <tbody id="rail"></tbody>
+    </table>
+  </section>
+
+  <section>
     <h2>Empty stations</h2>
     <div id="empty"></div>
   </section>
@@ -72,10 +84,12 @@ function pill(s) { return `<span class="pill">${s.name || s.station_id}</span>`;
 
 async function refresh() {
   try {
-    const [status, summary, movers] = await Promise.all([
+    const [status, summary, movers, railLines, railBunching] = await Promise.all([
       getJSON("/api/status"),
       getJSON("/api/analytics/bikes/summary"),
       getJSON("/api/analytics/bikes/movers?minutes=60&limit=10"),
+      getJSON("/api/analytics/rail/lines"),
+      getJSON("/api/analytics/rail/bunching"),
     ]);
 
     const feeds = Object.entries(status.sources || {}).map(([name, s]) => {
@@ -102,6 +116,21 @@ async function refresh() {
              `<td class="${cls}">${sign}${m.net_bike_change}</td>` +
              `<td>${m.bikes_start}</td><td>${m.bikes_end}</td></tr>`;
     }).join("") || `<tr><td colspan="4" class="meta">need two polls inside the window</td></tr>`;
+
+    document.getElementById("lines").innerHTML = railLines.lines.length
+      ? railLines.lines.map(l => `<span class="pill">${l.line}: ${l.vehicles} trains</span>`).join("")
+      : `<span class="meta">rail feed off or no vehicles stored yet</span>`;
+
+    const railRows = [
+      ...railBunching.bunches.map(b => `<tr><td>${b.station_name}</td>` +
+        `<td>${b.lines.join("/")}</td><td class="down">bunch</td><td>${b.headway}</td>` +
+        `<td class="meta">trains at ${b.train_etas.join(" and ")} min</td></tr>`),
+      ...railBunching.gaps.map(g => `<tr><td>${g.station_name}</td>` +
+        `<td>${g.lines.join("/")}</td><td class="up">gap</td><td>${g.gap}</td>` +
+        `<td class="meta">next train ${g.next_train_eta} min</td></tr>`),
+    ];
+    document.getElementById("rail").innerHTML = railRows.join("") ||
+      `<tr><td colspan="5" class="meta">no bunches or gaps in the latest snapshot</td></tr>`;
 
     document.getElementById("empty").innerHTML =
       summary.stations_empty.map(pill).join("") || `<span class="meta">none</span>`;

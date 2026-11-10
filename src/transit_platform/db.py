@@ -219,3 +219,26 @@ class TransitDB:
             q = q.where(station_status.c.station_id == station_id)
         with self.engine.connect() as conn:
             return [dict(row._mapping) for row in conn.execute(q)]
+
+    def predictions_in_window(self, since_iso: str,
+                              station_code: str | None = None) -> list[dict]:
+        """Prediction rows fetched at or after ``since_iso``, oldest first."""
+        q = (select(rail_predictions)
+             .where(rail_predictions.c.fetched_at >= since_iso)
+             .order_by(rail_predictions.c.fetched_at.asc()))
+        if station_code:
+            q = q.where(rail_predictions.c.station_code == station_code)
+        with self.engine.connect() as conn:
+            return [dict(row._mapping) for row in conn.execute(q)]
+
+    def latest_predictions(self) -> list[dict]:
+        """Each station's most recent prediction snapshot."""
+        latest = select(rail_predictions.c.station_code,
+                        func.max(rail_predictions.c.fetched_at).label("mf")
+                        ).group_by(rail_predictions.c.station_code).subquery()
+        q = rail_predictions.select().join(
+            latest,
+            (rail_predictions.c.station_code == latest.c.station_code)
+            & (rail_predictions.c.fetched_at == latest.c.mf))
+        with self.engine.connect() as conn:
+            return [dict(row._mapping) for row in conn.execute(q)]

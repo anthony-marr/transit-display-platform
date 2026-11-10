@@ -10,7 +10,7 @@ from pathlib import Path
 from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 
-from . import analytics, config
+from . import analytics, config, rail_analytics
 from .db import TransitDB
 from .hub import EventHub
 from .ingest import Poller
@@ -80,6 +80,20 @@ def create_app(db: TransitDB | None = None, hub: EventHub | None = None,
     def bike_station_stats(station_id: str,
                            minutes: int = Query(default=1440, ge=1, le=10080)):
         return analytics.station_stats_report(app.state.db, station_id, minutes=minutes)
+
+    @app.get("/api/analytics/rail/headways")
+    def rail_headways(station: str = Query(default="E03"),
+                      minutes: int = Query(default=60, ge=1, le=10080)):
+        return rail_analytics.station_headways_report(
+            app.state.db, station.upper(), minutes=minutes)
+
+    @app.get("/api/analytics/rail/bunching")
+    def rail_bunching():
+        return rail_analytics.bunching_report(app.state.db)
+
+    @app.get("/api/analytics/rail/lines")
+    def rail_lines():
+        return rail_analytics.lines_report(app.state.db)
 
     @app.get("/", include_in_schema=False)
     def dashboard():
