@@ -57,19 +57,30 @@ def snapshot_headways(snapshot_rows: list[dict]) -> list[dict]:
 
 def find_bunches(headway_records: list[dict],
                  threshold: int = BUNCH_MINUTES) -> list[dict]:
-    """Station-directions where two trains arrive within `threshold` minutes."""
+    """Station-directions where trains arrive within `threshold` minutes of
+    each other. A run of chained bunched pairs (e.g. trains at 3, 4 and 5
+    minutes) collapses into one row, so the bunching table does not repeat
+    the same station once per overlapping pair."""
     out = []
     for rec in headway_records:
-        for i, hw in enumerate(rec["headways"]):
-            if hw <= threshold:
-                out.append({
-                    "station_code": rec["station_code"],
-                    "station_name": rec["station_name"],
-                    "group": rec["group"],
-                    "lines": rec["lines"],
-                    "headway": hw,
-                    "train_etas": [rec["etas"][i], rec["etas"][i + 1]],
-                })
+        headways = rec["headways"]
+        i = 0
+        while i < len(headways):
+            if headways[i] > threshold:
+                i += 1
+                continue
+            j = i
+            while j + 1 < len(headways) and headways[j + 1] <= threshold:
+                j += 1
+            out.append({
+                "station_code": rec["station_code"],
+                "station_name": rec["station_name"],
+                "group": rec["group"],
+                "lines": rec["lines"],
+                "headway": min(headways[i:j + 1]),
+                "train_etas": rec["etas"][i:j + 2],
+            })
+            i = j + 1
     out.sort(key=lambda b: b["headway"])
     return out
 
