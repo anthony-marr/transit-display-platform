@@ -48,3 +48,24 @@ def test_unknown_estimates_are_skipped_without_mutating_input():
     assert records[0]["etas"] == [2, 9]
     assert records[0]["headways"] == [7]
     assert rows == original
+
+
+def test_chained_bunched_trains_collapse_into_one_row():
+    # trains at 3, 4 and 6 minutes form two overlapping pairs; the table
+    # should show the station once, not twice with near-duplicate rows
+    records = ra.snapshot_headways([
+        prediction("3"), prediction("4"), prediction("6"),
+    ])
+    bunches = ra.find_bunches(records)
+    assert len(bunches) == 1
+    assert bunches[0]["train_etas"] == [3, 4, 6]
+    assert bunches[0]["headway"] == 1
+
+
+def test_separated_pairs_in_one_direction_stay_separate_rows():
+    records = ra.snapshot_headways([
+        prediction("1"), prediction("2"), prediction("10"), prediction("11"),
+    ])
+    bunches = ra.find_bunches(records)
+    assert len(bunches) == 2
+    assert [b["train_etas"] for b in bunches] == [[1, 2], [10, 11]]
