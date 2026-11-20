@@ -159,14 +159,16 @@ class TransitDB:
 
     def latest_station_status(self, station_id: str | None = None,
                               limit: int = 1000) -> list[dict]:
+        # One row per station, keyed on max(id) rather than max(fetched_at):
+        # a timestamp tie (e.g. an ingest batch written twice) must not
+        # return the same station twice and double-count its bikes.
         latest = select(station_status.c.station_id,
-                        func.max(station_status.c.fetched_at).label("mf")
+                        func.max(station_status.c.id).label("mid")
                         ).group_by(station_status.c.station_id).subquery()
         q = (select(station_status, stations.c.name, stations.c.lat, stations.c.lon,
                     stations.c.capacity)
              .select_from(station_status.join(
-                 latest, (station_status.c.station_id == latest.c.station_id)
-                 & (station_status.c.fetched_at == latest.c.mf))
+                 latest, station_status.c.id == latest.c.mid)
              .join(stations, stations.c.station_id == station_status.c.station_id,
                    isouter=True)))
         if station_id:
