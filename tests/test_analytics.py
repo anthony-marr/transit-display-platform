@@ -78,3 +78,18 @@ def test_movers_window_excludes_old_rows(db):
                       num_bikes_available=10, num_docks_available=10)])
     movers = analytics.movers_report(db, minutes=60)
     assert movers["movers"] == []
+
+
+def test_latest_station_status_one_row_per_station_on_timestamp_tie(db):
+    # a double-written ingest batch (same station, same fetched_at) must not
+    # duplicate the station in the latest snapshot or double-count totals
+    ts = "2026-11-20T12:00:00+00:00"
+    db.insert_station_status([
+        StationStatus(station_id="s1", fetched_at=ts,
+                      num_bikes_available=5, num_docks_available=10),
+        StationStatus(station_id="s1", fetched_at=ts,
+                      num_bikes_available=5, num_docks_available=10),
+    ])
+    rows = db.latest_station_status()
+    assert len(rows) == 1
+    assert analytics.summary_report(db)["total_bikes_available"] == 5
