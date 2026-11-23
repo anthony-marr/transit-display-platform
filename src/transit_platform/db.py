@@ -234,14 +234,26 @@ class TransitDB:
             return [dict(row._mapping) for row in conn.execute(q)]
 
     def latest_predictions(self) -> list[dict]:
-        """Each station's most recent prediction snapshot."""
+        """Each station's most recent prediction snapshot.
+
+        Rows are DISTINCT over the content columns (id excluded): a
+        timestamp-tied double write of one ingest batch must not return the
+        same train twice - duplicated rows would list each train twice and
+        fabricate a headway-0 bunch in the rail analytics. Genuinely
+        different trains (line/destination/minutes/group) never collapse.
+        """
         latest = select(rail_predictions.c.station_code,
                         func.max(rail_predictions.c.fetched_at).label("mf")
                         ).group_by(rail_predictions.c.station_code).subquery()
-        q = rail_predictions.select().join(
-            latest,
-            (rail_predictions.c.station_code == latest.c.station_code)
-            & (rail_predictions.c.fetched_at == latest.c.mf))
+        q = (select(rail_predictions.c.station_code,
+                    rail_predictions.c.station_name, rail_predictions.c.line,
+                    rail_predictions.c.destination, rail_predictions.c.minutes,
+                    rail_predictions.c.grp, rail_predictions.c.fetched_at)
+             .select_from(rail_predictions.join(
+                 latest,
+                 (rail_predictions.c.station_code == latest.c.station_code)
+                 & (rail_predictions.c.fetched_at == latest.c.mf)))
+             .distinct())
         with self.engine.connect() as conn:
             return [dict(row._mapping) for row in conn.execute(q)]
 
