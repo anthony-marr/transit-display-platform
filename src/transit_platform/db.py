@@ -147,13 +147,32 @@ class TransitDB:
     def insert_predictions(self, rows: list[RailPrediction]) -> int:
         if not rows:
             return 0
+        # A retry of an identical station snapshot is a no-op. Compare the
+        # whole batch, including multiplicity: two real trains can share every
+        # prediction field, so DISTINCT on read would lose valid arrivals.
+        columns = ("station_code", "station_name", "line", "destination",
+                   "minutes", "grp", "fetched_at")
+        from collections import Counter
+        batches: dict[tuple[str, str], list[dict]] = {}
+        for r in rows:
+            values = {"station_code": r.station_code, "station_name": r.station_name,
+                      "line": r.line, "destination": r.destination,
+                      "minutes": r.minutes, "grp": r.group,
+                      "fetched_at": r.fetched_at}
+            batches.setdefault((r.station_code, r.fetched_at), []).append(values)
+        inserted = 0
         with self.engine.begin() as conn:
-            conn.execute(rail_predictions.insert(), [{
-                "station_code": r.station_code, "station_name": r.station_name,
-                "line": r.line, "destination": r.destination, "minutes": r.minutes,
-                "grp": r.group, "fetched_at": r.fetched_at}
-                for r in rows])
-        return len(rows)
+            for (station, fetched), batch in batches.items():
+                existing = conn.execute(select(rail_predictions).where(
+                    (rail_predictions.c.station_code == station)
+                    & (rail_predictions.c.fetched_at == fetched))).mappings().all()
+                wanted = Counter(tuple(r[c] for c in columns) for r in batch)
+                present = Counter(tuple(r[c] for c in columns) for r in existing)
+                if wanted == present:
+                    continue
+                conn.execute(rail_predictions.insert(), batch)
+                inserted += len(batch)
+        return inserted
 
     # -- reads ----------------------------------------------------------
 
@@ -234,26 +253,14 @@ class TransitDB:
             return [dict(row._mapping) for row in conn.execute(q)]
 
     def latest_predictions(self) -> list[dict]:
-        """Each station's most recent prediction snapshot.
-
-        Rows are DISTINCT over the content columns (id excluded): a
-        timestamp-tied double write of one ingest batch must not return the
-        same train twice - duplicated rows would list each train twice and
-        fabricate a headway-0 bunch in the rail analytics. Genuinely
-        different trains (line/destination/minutes/group) never collapse.
-        """
+        """Each station's most recent prediction snapshot."""
         latest = select(rail_predictions.c.station_code,
                         func.max(rail_predictions.c.fetched_at).label("mf")
                         ).group_by(rail_predictions.c.station_code).subquery()
-        q = (select(rail_predictions.c.station_code,
-                    rail_predictions.c.station_name, rail_predictions.c.line,
-                    rail_predictions.c.destination, rail_predictions.c.minutes,
-                    rail_predictions.c.grp, rail_predictions.c.fetched_at)
-             .select_from(rail_predictions.join(
-                 latest,
-                 (rail_predictions.c.station_code == latest.c.station_code)
-                 & (rail_predictions.c.fetched_at == latest.c.mf)))
-             .distinct())
+        q = rail_predictions.select().join(
+            latest,
+            (rail_predictions.c.station_code == latest.c.station_code)
+            & (rail_predictions.c.fetched_at == latest.c.mf))
         with self.engine.connect() as conn:
             return [dict(row._mapping) for row in conn.execute(q)]
 
